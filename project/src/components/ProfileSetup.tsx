@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { User, Heart, Activity, AlertCircle, Save } from 'lucide-react';
+import { User, Heart, Activity, AlertCircle, Save, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
 
 interface ProfileSetupProps {
   onComplete: () => void;
 }
 
 const ProfileSetup: React.FC<ProfileSetupProps> = ({ onComplete }) => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,6 +38,8 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onComplete }) => {
     if (value.trim()) {
       const items = value.split(',').map(item => item.trim()).filter(item => item);
       setFormData(prev => ({ ...prev, [field]: items }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: [] }));
     }
   };
 
@@ -45,9 +48,9 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onComplete }) => {
     try {
       const profileData = {
         ...formData,
-        age: parseInt(formData.age as string),
-        height: parseInt(formData.height as string),
-        weight: parseFloat(formData.weight as string),
+        age: parseInt(formData.age as string) || 0,
+        height: parseInt(formData.height as string) || 0,
+        weight: parseFloat(formData.weight as string) || 0,
         profileCompleted: true
       };
       
@@ -60,6 +63,10 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onComplete }) => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCancel = () => {
+    logout();
   };
 
   const steps = [
@@ -359,13 +366,23 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ onComplete }) => {
 
         {/* Navigation Buttons */}
         <div className="flex justify-between">
-          <button
-            onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-            disabled={currentStep === 1}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Previous
-          </button>
+          <div className="flex space-x-4">
+            <button
+              onClick={handleCancel}
+              className="flex items-center space-x-2 px-6 py-3 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              <X className="h-4 w-4" />
+              <span>Cancel & Logout</span>
+            </button>
+            
+            <button
+              onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+              disabled={currentStep === 1}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+          </div>
           
           {currentStep < steps.length ? (
             <button

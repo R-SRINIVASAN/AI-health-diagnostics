@@ -12,16 +12,16 @@
     "deploy": "your-deployment-command-here"
   },
   "dependencies": {
+    "chart.js": "^4.4.0",
+    "date-fns": "^2.30.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.21.0",
-    "chart.js": "^4.4.0",
     "react-chartjs-2": "^5.2.0",
-    "jspdf": "^2.5.1",
-    "html2canvas": "^1.4.1",
-    "react-dropzone": "^14.2.3",
-    "date-fns": "^2.30.0",
+    "react-dom": "^18.3.1",
+    "react-dropzone": "^14.3.8",
+    "react-router-dom": "^6.21.0",
     "recharts": "^2.8.0"
   },
   "devDependencies": {
