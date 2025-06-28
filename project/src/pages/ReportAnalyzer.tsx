@@ -1,323 +1,281 @@
-import React, { useState, useCallback } from 'react';
-import { FileText, Upload, Download, Eye, AlertCircle, CheckCircle } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { MedicalReport } from '../types';
-import { useDropzone } from 'react-dropzone';
-import { PDFExportUtil } from '../utils/pdfExport';
+import React, { useState } from 'react';
+
+interface MedicalReport {
+  id: string;
+  userId: string;
+  fileName: string;
+  reportType: string;
+  extractedData: Record<
+    string,
+    {
+      value: number | string;
+      unit: string;
+      normalRange: string;
+      status: 'Normal' | 'High' | 'Low' | 'Borderline High' | 'Slightly High' | 'Elevated';
+    }
+  >;
+  analysis: string;
+  suggestion: string;
+  prescription: string;
+  uploadDate: Date;
+}
 
 const ReportAnalyzer: React.FC = () => {
-  const { user } = useAuth();
   const [reports, setReports] = useState<MedicalReport[]>([]);
-  const [selectedReport, setSelectedReport] = useState<MedicalReport | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock OCR and AI analysis function
+  // Simulated user
+  const user = { id: '1', name: 'Demo User' };
+
+  // Simulated AI analysis based on filename
   const analyzeReport = async (file: File): Promise<MedicalReport> => {
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Mock extracted data based on file name patterns
-    const fileName = file.name.toLowerCase();
-    let extractedData: Record<string, any> = {};
-    let analysis = '';
-    let reportType = 'General Medical Report';
+    setLoading(true);
+    setError(null);
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // simulate delay
 
-    if (fileName.includes('blood') || fileName.includes('cbc')) {
+    const fileName = file.name.toLowerCase();
+    let extractedData: any = {};
+    let analysis = '';
+    let suggestion = '';
+    let prescription = '';
+    let reportType = '';
+
+    if (fileName.includes('cbc') || fileName.includes('blood')) {
       reportType = 'Complete Blood Count (CBC)';
       extractedData = {
         'Hemoglobin': { value: 12.5, unit: 'g/dL', normalRange: '12.0-16.0', status: 'Normal' },
         'WBC Count': { value: 7200, unit: '/μL', normalRange: '4000-11000', status: 'Normal' },
-        'RBC Count': { value: 4.2, unit: 'million/μL', normalRange: '4.2-5.4', status: 'Normal' },
-        'Platelet Count': { value: 250000, unit: '/μL', normalRange: '150000-450000', status: 'Normal' },
-        'Hematocrit': { value: 38, unit: '%', normalRange: '36-46', status: 'Normal' }
+        'RBC Count': { value: 4.8, unit: 'million/μL', normalRange: '4.2-5.4', status: 'Normal' },
+        'Platelet Count': { value: 180000, unit: '/μL', normalRange: '150000-450000', status: 'Normal' },
+        'Hematocrit': { value: 41, unit: '%', normalRange: '36-46', status: 'Normal' },
       };
-      analysis = 'Your complete blood count shows normal values across all parameters. Hemoglobin levels are within the healthy range, indicating good oxygen-carrying capacity. White blood cell count is normal, suggesting no signs of infection or immune system issues. Platelet count is adequate for proper blood clotting function.';
+      analysis = 'CBC values are within normal range, indicating healthy blood composition.';
+      suggestion = 'Maintain a balanced diet and regular exercise to keep blood health optimal.';
+      prescription = 'No medication required. Routine checkup recommended annually.';
     } else if (fileName.includes('lipid') || fileName.includes('cholesterol')) {
       reportType = 'Lipid Profile';
       extractedData = {
-        'Total Cholesterol': { value: 195, unit: 'mg/dL', normalRange: '<200', status: 'Normal' },
-        'LDL Cholesterol': { value: 120, unit: 'mg/dL', normalRange: '<100', status: 'Borderline High' },
-        'HDL Cholesterol': { value: 45, unit: 'mg/dL', normalRange: '>40', status: 'Normal' },
-        'Triglycerides': { value: 150, unit: 'mg/dL', normalRange: '<150', status: 'Normal' }
+        'Total Cholesterol': { value: 210, unit: 'mg/dL', normalRange: '<200', status: 'Borderline High' },
+        'LDL Cholesterol': { value: 140, unit: 'mg/dL', normalRange: '<100', status: 'High' },
+        'HDL Cholesterol': { value: 35, unit: 'mg/dL', normalRange: '>40', status: 'Low' },
+        'Triglycerides': { value: 190, unit: 'mg/dL', normalRange: '<150', status: 'High' },
       };
-      analysis = 'Your lipid profile shows mostly normal values with one area of concern. LDL cholesterol is slightly elevated at 120 mg/dL, which puts you in the borderline high category. Consider dietary modifications to reduce saturated fat intake and increase physical activity. HDL cholesterol and triglycerides are within normal ranges.';
+      analysis = 'High LDL and triglycerides suggest risk of cardiovascular disease. HDL is low.';
+      suggestion = 'Adopt a low-fat diet, increase physical activity, and avoid smoking.';
+      prescription = 'Consider statins after consulting a cardiologist. Follow-up lipid profile in 3 months.';
     } else if (fileName.includes('kidney') || fileName.includes('creatinine')) {
       reportType = 'Kidney Function Test';
       extractedData = {
-        'Creatinine': { value: 1.0, unit: 'mg/dL', normalRange: '0.6-1.2', status: 'Normal' },
-        'BUN': { value: 15, unit: 'mg/dL', normalRange: '7-20', status: 'Normal' },
-        'eGFR': { value: 90, unit: 'mL/min/1.73m²', normalRange: '>60', status: 'Normal' },
-        'Protein in Urine': { value: 'Trace', unit: '', normalRange: 'Negative', status: 'Trace' }
+        'Creatinine': { value: 1.4, unit: 'mg/dL', normalRange: '0.6-1.2', status: 'Slightly High' },
+        'BUN': { value: 24, unit: 'mg/dL', normalRange: '7-20', status: 'High' },
+        'eGFR': { value: 55, unit: 'mL/min/1.73m²', normalRange: '>60', status: 'Low' },
+        'Protein in Urine': { value: 'Positive', unit: '', normalRange: 'Negative', status: 'High' },
       };
-      analysis = 'Your kidney function tests indicate good overall kidney health. Creatinine and BUN levels are within normal ranges, and your estimated glomerular filtration rate (eGFR) shows excellent kidney function. There is a trace amount of protein in urine, which should be monitored but is not immediately concerning.';
-    } else {
+      analysis = 'Kidney function mildly reduced. Elevated BUN and creatinine suggest further evaluation.';
+      suggestion = 'Maintain hydration, avoid nephrotoxic drugs, and control blood pressure.';
+      prescription = 'Consult nephrologist for detailed assessment. Monitor kidney function every 6 months.';
+    } else if (fileName.includes('lft') || fileName.includes('liver')) {
+      reportType = 'Liver Function Test';
       extractedData = {
-        'Overall Assessment': { value: 'Normal', unit: '', normalRange: '', status: 'Normal' },
-        'Key Findings': { value: 'No significant abnormalities detected', unit: '', normalRange: '', status: 'Normal' }
+        'ALT (SGPT)': { value: 65, unit: 'U/L', normalRange: '7-56', status: 'High' },
+        'AST (SGOT)': { value: 72, unit: 'U/L', normalRange: '5-40', status: 'High' },
+        'Bilirubin Total': { value: 1.3, unit: 'mg/dL', normalRange: '0.1-1.2', status: 'Slightly High' },
+        'Albumin': { value: 3.5, unit: 'g/dL', normalRange: '3.4-5.4', status: 'Normal' },
       };
-      analysis = 'The medical report has been analyzed and shows no significant abnormalities. All major parameters appear to be within expected ranges. Please consult with your healthcare provider for detailed interpretation and any specific recommendations.';
+      analysis = 'Elevated liver enzymes suggest mild liver stress or fatty liver. Consider ultrasound.';
+      suggestion = 'Avoid alcohol, fatty foods, and medications harmful to liver.';
+      prescription = 'Liver supportive therapy as advised by doctor. Follow up liver enzymes in 3 months.';
+    } else if (fileName.includes('thyroid') || fileName.includes('tsh')) {
+      reportType = 'Thyroid Function Test';
+      extractedData = {
+        'TSH': { value: 6.2, unit: 'μIU/mL', normalRange: '0.4-4.0', status: 'High' },
+        'T3': { value: 90, unit: 'ng/dL', normalRange: '80-200', status: 'Normal' },
+        'T4': { value: 7.2, unit: 'μg/dL', normalRange: '5.0-12.0', status: 'Normal' },
+      };
+      analysis = 'High TSH suggests primary hypothyroidism. Clinical symptoms should be reviewed.';
+      suggestion = 'Monitor symptoms like fatigue, weight gain, and cold intolerance.';
+      prescription = 'Thyroxine replacement therapy as prescribed by endocrinologist.';
+    } else if (fileName.includes('hba1c') || fileName.includes('diabetes')) {
+      reportType = 'Diabetes Panel';
+      extractedData = {
+        'Fasting Glucose': { value: 115, unit: 'mg/dL', normalRange: '70-100', status: 'High' },
+        'Postprandial Glucose': { value: 165, unit: 'mg/dL', normalRange: '<140', status: 'High' },
+        'HbA1c': { value: 6.7, unit: '%', normalRange: '<5.7', status: 'High' },
+      };
+      analysis = 'Values indicate prediabetes to early diabetes. Lifestyle modification and monitoring advised.';
+      suggestion = 'Adopt low sugar diet, regular exercise, and maintain healthy weight.';
+      prescription = 'Start metformin if lifestyle changes insufficient. Regular glucose monitoring.';
+    } else if (fileName.includes('electrolyte') || fileName.includes('sodium')) {
+      reportType = 'Electrolyte Panel';
+      extractedData = {
+        'Sodium': { value: 136, unit: 'mEq/L', normalRange: '135-145', status: 'Normal' },
+        'Potassium': { value: 4.8, unit: 'mEq/L', normalRange: '3.5-5.1', status: 'Normal' },
+        'Chloride': { value: 100, unit: 'mEq/L', normalRange: '98-106', status: 'Normal' },
+        'Bicarbonate': { value: 24, unit: 'mEq/L', normalRange: '22-29', status: 'Normal' },
+      };
+      analysis = 'Electrolyte values are within normal range.';
+      suggestion = 'Continue balanced diet and hydration.';
+      prescription = 'No medication required.';
+    } else if (fileName.includes('vitamin')) {
+      reportType = 'Vitamin Panel';
+      extractedData = {
+        'Vitamin D': { value: 19, unit: 'ng/mL', normalRange: '30-100', status: 'Low' },
+        'Vitamin B12': { value: 320, unit: 'pg/mL', normalRange: '200-900', status: 'Normal' },
+      };
+      analysis = 'Vitamin D deficiency detected. Consider supplementation and sun exposure.';
+      suggestion = 'Increase outdoor activity for sunlight exposure.';
+      prescription = 'Vitamin D3 supplements 1000-2000 IU daily as per doctor’s advice.';
+    } else if (fileName.includes('cardiac') || fileName.includes('troponin')) {
+      reportType = 'Cardiac Marker Panel';
+      extractedData = {
+        'Troponin I': { value: 0.02, unit: 'ng/mL', normalRange: '<0.04', status: 'Normal' },
+        'CK-MB': { value: 3.1, unit: 'ng/mL', normalRange: '0-4.3', status: 'Normal' },
+      };
+      analysis = 'No cardiac injury markers detected. Report is normal.';
+      suggestion = 'Maintain heart-healthy lifestyle.';
+      prescription = 'No medication required.';
+    } else if (fileName.includes('iron')) {
+      reportType = 'Iron Studies';
+      extractedData = {
+        'Serum Iron': { value: 45, unit: 'μg/dL', normalRange: '60-170', status: 'Low' },
+        'TIBC': { value: 410, unit: 'μg/dL', normalRange: '240-450', status: 'Normal' },
+        'Ferritin': { value: 10, unit: 'ng/mL', normalRange: '15-150', status: 'Low' },
+      };
+      analysis = 'Iron deficiency anemia likely. Iron supplements may be required.';
+      suggestion = 'Increase intake of iron-rich foods like spinach, red meat.';
+      prescription = 'Iron supplements as prescribed. Follow up CBC in 3 months.';
+    } else if (fileName.includes('urine')) {
+      reportType = 'Urine Routine Analysis';
+      extractedData = {
+        'Appearance': { value: 'Clear', unit: '', normalRange: 'Clear', status: 'Normal' },
+        'pH': { value: 6.0, unit: '', normalRange: '4.5-8.0', status: 'Normal' },
+        'Protein': { value: 'Negative', unit: '', normalRange: 'Negative', status: 'Normal' },
+        'Glucose': { value: 'Negative', unit: '', normalRange: 'Negative', status: 'Normal' },
+      };
+      analysis = 'Urine sample is within expected parameters. No infection or sugar detected.';
+      suggestion = 'Maintain hydration and hygiene.';
+      prescription = 'No medication required.';
+    } else if (fileName.includes('fibrosis')) {
+      reportType = 'Liver Fibrosis Panel';
+      extractedData = {
+        'FibroTest Score': { value: 0.25, unit: '', normalRange: '0-0.21', status: 'Slightly High' },
+        'Fibrosis Stage': { value: 'F1', unit: '', normalRange: 'F0-F4', status: 'Normal' },
+      };
+      analysis = 'Mild liver fibrosis detected, regular monitoring recommended.';
+      suggestion = 'Avoid alcohol and hepatotoxic substances.';
+      prescription = 'Regular liver function monitoring and lifestyle changes.';
+    
+    } else {
+      // No fallback report, throw error for unsupported
+      setLoading(false);
+      throw new Error('Unsupported report type. Please upload a recognized medical report.');
     }
 
+    setLoading(false);
+
     return {
-      id: Date.now().toString(),
-      userId: user?.id || '1',
+      id: `${Date.now()}`,
+      userId: user.id,
       fileName: file.name,
       reportType,
       extractedData,
       analysis,
-      uploadDate: new Date()
+      suggestion,
+      prescription,
+      uploadDate: new Date(),
     };
   };
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) return;
-    
-    const file = acceptedFiles[0];
-    setIsAnalyzing(true);
-    
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+
     try {
-      const analyzedReport = await analyzeReport(file);
-      setReports(prev => [analyzedReport, ...prev]);
-      setSelectedReport(analyzedReport);
-    } catch (error) {
-      console.error('Report analysis failed:', error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }, [user]);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'image/*': ['.png', '.jpg', '.jpeg']
-    },
-    maxFiles: 1,
-    maxSize: 10 * 1024 * 1024 // 10MB
-  });
-
-  const handleDownloadPDF = async () => {
-    if (!selectedReport) return;
-    
-    try {
-      const reportData = {
-        'Patient Name': user?.name,
-        'Report Type': selectedReport.reportType,
-        'Upload Date': selectedReport.uploadDate.toLocaleString(),
-        'File Name': selectedReport.fileName,
-        'Analysis': selectedReport.analysis,
-        ...Object.entries(selectedReport.extractedData).reduce((acc, [key, value]) => {
-          if (typeof value === 'object' && value !== null) {
-            acc[key] = `${value.value} ${value.unit} (Normal: ${value.normalRange}) - ${value.status}`;
-          } else {
-            acc[key] = value;
-          }
-          return acc;
-        }, {} as Record<string, any>)
-      };
-      
-      await PDFExportUtil.generateReportPDF(reportData, 'Medical Report Analysis');
-    } catch (error) {
-      console.error('Failed to generate PDF:', error);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'normal': return 'text-green-600 bg-green-100';
-      case 'high': case 'elevated': case 'borderline high': return 'text-red-600 bg-red-100';
-      case 'low': return 'text-yellow-600 bg-yellow-100';
-      case 'trace': return 'text-blue-600 bg-blue-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'normal': return <CheckCircle className="h-4 w-4" />;
-      case 'high': case 'elevated': case 'borderline high': return <AlertCircle className="h-4 w-4" />;
-      default: return <AlertCircle className="h-4 w-4" />;
+      const newReport = await analyzeReport(file);
+      setReports((prev) => [newReport, ...prev]);
+    } catch (err) {
+      setError((err as Error).message || 'Failed to analyze the report.');
+      setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center space-x-4">
-        <FileText className="h-8 w-8 text-blue-600" />
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Medical Report Analyzer</h1>
-          <p className="text-gray-600">Upload and analyze your medical reports with AI</p>
-        </div>
-      </div>
+    <div className="p-6 max-w-4xl mx-auto font-sans">
+      <h1 className="text-3xl font-bold mb-4 text-center">Medical Report Analyzer</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Upload Section */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Upload Report</h2>
-            
-            {/* File Upload */}
-            <div
-              {...getRootProps()}
-              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                isDragActive 
-                  ? 'border-blue-500 bg-blue-50' 
-                  : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-              }`}
-            >
-              <input {...getInputProps()} />
-              <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              {isDragActive ? (
-                <p className="text-blue-600">Drop the file here...</p>
-              ) : (
-                <div>
-                  <p className="text-gray-600 mb-2">
-                    Drag & drop a medical report here, or click to select
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Supports PDF, PNG, JPG (max 10MB)
-                  </p>
-                </div>
-              )}
-            </div>
+      <input
+        type="file"
+        accept=".pdf,.txt,.doc,.docx"
+        onChange={handleFileUpload}
+        disabled={loading}
+        className="mb-6"
+      />
 
-            {isAnalyzing && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                  <span className="text-blue-800">Analyzing report...</span>
-                </div>
-                <p className="text-xs text-blue-600 mt-2">
-                  Processing OCR and running AI analysis
-                </p>
-              </div>
-            )}
+      {loading && <p className="text-blue-600 font-semibold">Analyzing report, please wait...</p>}
 
-            {/* Recent Reports */}
-            <div className="mt-6">
-              <h3 className="font-semibold text-gray-900 mb-3">Recent Reports</h3>
-              {reports.length === 0 ? (
-                <p className="text-gray-500 text-sm">No reports uploaded yet</p>
-              ) : (
-                <div className="space-y-2">
-                  {reports.slice(0, 5).map((report) => (
-                    <div
-                      key={report.id}
-                      onClick={() => setSelectedReport(report)}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedReport?.id === report.id
-                          ? 'bg-blue-100 border border-blue-300'
-                          : 'bg-gray-50 hover:bg-gray-100'
-                      }`}
-                    >
-                      <p className="font-medium text-sm text-gray-900">
-                        {report.reportType}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {report.uploadDate.toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+      {error && <p className="text-red-600 font-semibold mb-4">{error}</p>}
+
+      {reports.length === 0 && !loading && !error && (
+        <p className="italic text-gray-600">No reports uploaded yet.</p>
+      )}
+
+      {reports.map((report) => (
+        <div key={report.id} className="border rounded-lg p-4 mb-6 shadow-md bg-white">
+          <h2 className="text-xl font-semibold mb-2">{report.reportType}</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Uploaded on: {report.uploadDate.toLocaleString()} | File: {report.fileName}
+          </p>
+
+          <table className="w-full text-left border-collapse mb-4">
+            <thead>
+              <tr>
+                <th className="border-b py-2 px-3">Test</th>
+                <th className="border-b py-2 px-3">Value</th>
+                <th className="border-b py-2 px-3">Unit</th>
+                <th className="border-b py-2 px-3">Normal Range</th>
+                <th className="border-b py-2 px-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(report.extractedData).map(([test, data]) => (
+                <tr key={test}>
+                  <td className="border-b py-2 px-3">{test}</td>
+                  <td className="border-b py-2 px-3">{data.value}</td>
+                  <td className="border-b py-2 px-3">{data.unit}</td>
+                  <td className="border-b py-2 px-3">{data.normalRange}</td>
+                  <td
+                    className={`border-b py-2 px-3 font-semibold ${
+                      data.status === 'Normal'
+                        ? 'text-green-600'
+                        : data.status === 'Low' || data.status === 'Slightly High' || data.status === 'Borderline High'
+                        ? 'text-orange-600'
+                        : 'text-red-600'
+                    }`}
+                  >
+                    {data.status}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="bg-gray-100 p-3 rounded-md mb-2">
+            <h3 className="font-semibold mb-1">AI Analysis:</h3>
+            <p>{report.analysis}</p>
+          </div>
+
+          <div className="bg-yellow-100 p-3 rounded-md mb-2">
+            <h3 className="font-semibold mb-1">Suggestions:</h3>
+            <p>{report.suggestion}</p>
+          </div>
+
+          <div className="bg-green-100 p-3 rounded-md">
+            <h3 className="font-semibold mb-1">Prescriptions / Recommendations:</h3>
+            <p>{report.prescription}</p>
           </div>
         </div>
-
-        {/* Analysis Results */}
-        <div className="lg:col-span-2">
-          {selectedReport ? (
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">{selectedReport.reportType}</h2>
-                  <p className="text-sm text-gray-500">
-                    Uploaded: {selectedReport.uploadDate.toLocaleString()}
-                  </p>
-                </div>
-                <button
-                  onClick={handleDownloadPDF}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Download PDF</span>
-                </button>
-              </div>
-
-              {/* Extracted Values */}
-              <div className="mb-8">
-                <h3 className="font-semibold text-gray-900 mb-4">Extracted Values</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(selectedReport.extractedData).map(([key, value]) => (
-                    <div key={key} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-gray-900">{key}</span>
-                        {typeof value === 'object' && value !== null && value.status && (
-                          <span className={`flex items-center space-x-1 text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(value.status)}`}>
-                            {getStatusIcon(value.status)}
-                            <span>{value.status}</span>
-                          </span>
-                        )}
-                      </div>
-                      
-                      {typeof value === 'object' && value !== null ? (
-                        <div>
-                          <p className="text-lg font-bold text-gray-900">
-                            {value.value} {value.unit}
-                          </p>
-                          {value.normalRange && (
-                            <p className="text-sm text-gray-500">
-                              Normal: {value.normalRange}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-gray-700">{String(value)}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* AI Analysis */}
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-4">AI Analysis & Recommendations</h3>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <div className="flex items-start space-x-3">
-                    <Eye className="h-6 w-6 text-blue-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-blue-900 mb-2">Clinical Interpretation</h4>
-                      <p className="text-blue-800 leading-relaxed">{selectedReport.analysis}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Disclaimer */}
-              <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-yellow-800">Medical Disclaimer</h4>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      This AI analysis is for informational purposes only. Please consult with your healthcare provider for professional medical interpretation and treatment recommendations.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-              <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-600 mb-2">No Report Selected</h2>
-              <p className="text-gray-500">
-                Upload a medical report or select from your recent reports to view the analysis
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+      ))}
     </div>
   );
 };
