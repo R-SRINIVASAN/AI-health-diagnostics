@@ -121,9 +121,9 @@ const Login: React.FC = () => {
 
           {/* Demo Instructions */}
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800 font-medium mb-2">Demo Access:</p>
-            <p className="text-xs text-blue-600">
-              Use any email and password to access the demo platform. 
+            <p className="text-sm text-blue-1000 font-medium mb-2">Emphasizes the core value proposition</p>
+            <p className="text-xs text-blue-800">
+              Integrating AI for Holistic Health & Wellness Insights
               This is a demonstration version with sample data.
             </p>
           </div>
