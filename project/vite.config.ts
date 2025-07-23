@@ -8,4 +8,7 @@ export default defineConfig({
     port: 3000,
     open: true, // Automatically opens the browser
   },
+  define: {
+    'process.env': {}, // This mocks process.env as an empty object in the browser environment
+  },
 });
