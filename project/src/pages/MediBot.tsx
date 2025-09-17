@@ -1,4 +1,3 @@
-// src/components/MediBot.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageCircle, Send, Bot, User, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,7 +16,8 @@ const model = genAI.getGenerativeModel({
   2. If a user asks for **personalized medical diagnosis, treatment, prescriptions, interpretation of personal test results, or specific medical advice for their individual condition**, you MUST firmly state that you cannot provide this and advise them to consult a qualified doctor or healthcare professional.
   3. For all other general health inquiries, provide helpful and informative responses based on widely accepted medical knowledge. Always include a disclaimer that you are an AI, not a doctor, and your information is for general knowledge, not a substitute for professional medical advice.
   4. Your tone should be helpful, empathetic, and responsible.
-  5. The current date is Wednesday, July 23, 2025. The current time is 7:25 PM IST. The current location is Chennai, Tamil Nadu, India.
+  5. If the user's query is not related to health or medicine, you must refuse to answer. Use a polite, canned response like "I am Dr. MediBot, an AI designed to answer only health-related questions. For other inquiries, I suggest you consult a different resource."
+  6. The current date is Wednesday, July 23, 2025. The current time is 7:25 PM IST. The current location is Chennai, Tamil Nadu, India.
   `
 });
 
@@ -58,6 +58,16 @@ const MediBot: React.FC = () => {
 
   const generateBotResponse = useCallback(async (userMessage: string): Promise<string> => {
     const lowerMessage = userMessage.toLowerCase();
+
+    // Keywords for non-medical topics
+    const nonMedicalKeywords = [
+      'weather', 'news', 'recipe', 'history', 'sports', 'movie', 'book', 'coding', 'programming',
+      'joke', 'game', 'politics', 'math', 'science', 'art', 'music', 'travel', 'finance', 'stock',
+      'crypto', 'ai', 'chatbot', 'what is your name'
+    ];
+    if (nonMedicalKeywords.some(keyword => lowerMessage.includes(keyword))) {
+      return "I am Dr. MediBot, an AI designed to answer only health-related questions. For other inquiries, I suggest you consult a different resource. 🤖🩺";
+    }
 
     const emergencyKeywords = [
       'chest pain', 'heart attack', 'emergency', 'trouble breathing', 'difficulty breathing',
@@ -208,7 +218,6 @@ const MediBot: React.FC = () => {
                     borderWidth: '1px'
                   }}
                 >
-                  {/* FIX APPLIED HERE: className moved to wrapper div */}
                   <div className="text-gray-800 leading-relaxed prose prose-sm max-w-none">
                     <ReactMarkdown>
                       {message.message}
