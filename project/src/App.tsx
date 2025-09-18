@@ -8,7 +8,7 @@ import Login from './components/Login';
 import Dashboard from './pages/Dashboard';
 import SymptomChecker from './pages/SymptomChecker';
 import HealthVitals from './pages/HealthVitals';
-import ReportAnalyzer from './pages/ReportAnalyzer';
+import LungCancerPredictor from './pages/LungCancerPredictor';
 import DietPlanner from './pages/DietPlanner';
 import MediBot from './pages/MediBot';
 import Profile from './pages/Profile';
@@ -33,7 +33,7 @@ function App() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="symptoms" element={<SymptomChecker />} />
             <Route path="vitals" element={<HealthVitals />} />
-            <Route path="reports" element={<ReportAnalyzer />} />
+            <Route path="lung" element={<LungCancerPredictor />} />
             <Route path="diet" element={<DietPlanner />} />
             <Route path="chat" element={<MediBot />} />
             <Route path="profile" element={<Profile />} />

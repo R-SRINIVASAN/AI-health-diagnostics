@@ -22,7 +22,7 @@ const Layout: React.FC = () => {
     { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
     { name: 'Symptom Checker', href: '/symptoms', icon: Stethoscope },
     { name: 'Health Vitals', href: '/vitals', icon: Activity },
-    { name: 'Report Analyzer', href: '/reports', icon: FileText },
+    { name: 'Lung Cancer Predictor', href: '/lung', icon: FileText },
     { name: 'Diet Planner', href: '/diet', icon: Apple },
     { name: 'Dr. MediBot', href: '/chat', icon: MessageCircle },
     { name: 'Profile', href: '/profile', icon: Settings },
